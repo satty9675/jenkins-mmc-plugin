@@ -1,0 +1,42 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+  <!--
+    This Jelly script is used to produce the global configuration option.
+
+    Jenkins uses a set of tag libraries to provide uniformity in forms.
+    To determine where this tag is defined, first check the namespace URI,
+    and then look under $JENKINS/views/. For example, <f:section> is defined
+    in $JENKINS/views/lib/form/section.jelly.
+
+    It's also often useful to just check other similar scripts to see what
+    tags they use. Views are always organized according to its owner class,
+    so it should be straightforward to find them.
+  -->
+  <!--
+  <f:section title="Deploy to Mule Management Console">
+    <f:entry title="MMC API URL" field="mmcUrl"
+      description="The URL of the MMC REST API - see http://www.mulesoft.org/documentation/display/current/MMC+REST+API for details">
+      <f:textbox default="http://localhost:8080/mmc/api"/>
+    </f:entry>
+    <f:entry title="User Name" field="user">
+      <f:textbox default="admin"/>
+    </f:entry>
+    <f:entry title="Password" field="password">
+      <f:password default="admin"/>
+    </f:entry>
+    
+    <f:block>
+	  <table>
+	    <f:optionalBlock name="dynamic" title="Update Deployment Scenarios and Mule Runtimes">
+	      <f:entry title="Available Deployment Scenarios" field="deploymentScenarios">
+	        <select name="deploymentScenarios">
+        		<option value="buildGoal">Build Goal</option>
+        		<option value="findBugsGoal">FindBugs goal</option>
+    		</select>
+	      </f:entry>
+	    </f:optionalBlock>
+	  </table>
+	</f:block>
+
+  </f:section>
+  -->
+</j:jelly>

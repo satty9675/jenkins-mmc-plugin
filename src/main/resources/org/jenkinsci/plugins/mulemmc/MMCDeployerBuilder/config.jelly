@@ -1,0 +1,47 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+  <!--
+    This jelly script is used for per-project configuration.
+
+    See global.jelly for a general discussion about jelly script.
+  -->
+
+  <!--
+    When submitted, it will be passed to the corresponding constructor parameter.
+  -->
+  <f:section title="Deploy to Mule Management Console">
+    <f:entry title="MMC API URL" field="mmcUrl"
+      description="The URL of the MMC REST API - see http://www.mulesoft.org/documentation/display/current/MMC+REST+API for details">
+      <f:textbox default="http://localhost:8080/mmc/api"/>
+    </f:entry>
+    <f:entry title="User Name" field="user">
+      <f:textbox default="admin"/>
+    </f:entry>
+    <f:entry title="Password" field="password">
+      <f:password default="admin"/>
+    </f:entry>
+    <f:validateButton
+   		title="${%Test Connection}" progress="${%Testing...}"
+   		method="testConnection" with="mmcUrl,user,password" />
+   		
+    <f:entry title="Version Number Pattern" field="versionPattern">
+      <f:textbox default="yyyyMMdd'T'HHmmssz"/>
+    </f:entry>
+    
+    <f:block>
+	  <table>
+	    <f:optionalBlock name="dynamic" title="Update Deployment Scenarios and Mule Runtimes">
+	      <f:entry title="Deployment Scenario" field="deploymentScenario">
+	      	<f:textbox/>
+<!--
+	        <select name="deploymentScenarios" multiple="true">
+        		<option value="buildGoal">Build Goal</option>
+        		<option value="findBugsGoal">FindBugs goal</option>       		
+    		</select>
+-->
+	      </f:entry>
+	    </f:optionalBlock>
+	  </table>
+	</f:block>
+
+  </f:section>
+</j:jelly>
