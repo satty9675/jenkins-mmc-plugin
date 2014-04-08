@@ -27,12 +27,17 @@ import java.util.Map.Entry;
 
 import javax.servlet.ServletException;
 
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
+
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.UsernamePasswordCredentials;
 import org.apache.commons.httpclient.auth.AuthPolicy;
 import org.apache.commons.httpclient.auth.AuthScope;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.methods.PostMethod;
+import org.apache.commons.httpclient.methods.PutMethod;
+import org.apache.commons.httpclient.methods.StringRequestEntity;
 import org.apache.commons.httpclient.methods.multipart.FilePart;
 import org.apache.commons.httpclient.methods.multipart.MultipartRequestEntity;
 import org.apache.commons.httpclient.methods.multipart.Part;
@@ -42,15 +47,7 @@ import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
 /**
- * Sample {@link Builder}.
- *
- * <p>
- * When the user configures the project and enables this builder,
- * {@link DescriptorImpl#newInstance(StaplerRequest)} is invoked
- * and a new {@link MMCDeployerBuilder} is created. The created
- * instance is persisted to the project configuration XML by using
- * XStream, so this allows you to use instance fields (like {@link #name})
- * to remember the configuration.
+ * MMCDeployerBuilder {@link Builder}.
  *
  * <p>
  * When a build is performed, the {@link #perform(AbstractBuild, Launcher, BuildListener)}
@@ -159,7 +156,8 @@ public class MMCDeployerBuilder extends Builder {
         	for (Entry<MavenArtifact, File> e: allMuleApplications.entrySet()) {
         		try {
 					String response = deployMuleApp(e.getKey(), e.getValue());
-					listener.getLogger().println(">>> Response is: " + response);
+//					listener.getLogger().println(">>> Response is: " + response);
+					
 				} catch (Exception e1) {
 					// TODO Auto-generated catch block
 					listener.getLogger().println("EXCEPTION: " + e1.toString());
@@ -191,13 +189,167 @@ public class MMCDeployerBuilder extends Builder {
 
         int statusCode = httpClient.executeMethod(post);
 
-        if (statusCode == 200)
-        	return post.getResponseBodyAsString();
+        if (statusCode == 200) {
+        	String response = post.getResponseBodyAsString();
+            post.releaseConnection();
+
+            System.out.println(">>>>>>>>>> UPLOAD TO REPOSITORY: " + response);
+
+        	JSONObject responseJson =  JSONObject.fromObject(response);
+			
+			String versionId = responseJson.getString("versionId");
+			String applicationId = responseJson.getString("applicationId");
+
+            //System.out.println(">>>>>>>>>> NEW APP ID: " + applicationId);
+            //System.out.println(">>>>>>>>>> NEW VERSION ID: " + versionId);
+
+			GetMethod get = new GetMethod(getMmcUrl() + "/deployments");
+			get.setDoAuthentication(true);
+			
+			//List all deployments
+		    statusCode = httpClient.executeMethod(get);
+		    
+		    if (statusCode == 200) {
+		    	response = get.getResponseBodyAsString();
+                get.releaseConnection();
+                System.out.println(">>>>>>>>>> ALL DEPLOYMENTS: " + response);
+                //Here we need to match deployment to application
+		    	JSONObject allDeployments =  JSONObject.fromObject(response);
+		    	JSONArray allDeploymentsData = allDeployments.getJSONArray("data");
+
+                JSONArray allApplicationVersions = listAllApplicationVersions(applicationId);
+
+		    	for (JSONObject nextDeployment : (List<JSONObject>)JSONArray.toCollection(allDeploymentsData, JSONObject.class)) {
+		    		JSONArray nextDeploymentApps = nextDeployment.getJSONArray("applications");
+                    String nextDeploymentId = nextDeployment.getString("id");
+
+                    for (JSONObject nextAppVersion : (List<JSONObject>) JSONArray.toCollection(allApplicationVersions, JSONObject.class)) {
+                        String nextAppVersionId = nextAppVersion.getString("id");
+
+                        if (nextDeploymentApps.contains(nextAppVersionId)) { //Found deployment, Update with new version
+                            JSONObject updatedDeployment = new JSONObject();
+                            updatedDeployment.put("name", nextDeployment.get("name"));
+                            updatedDeployment.put("lastModified", nextDeployment.get("lastModified"));
+                            JSONArray apps = new JSONArray();
+                            apps.add(nextAppVersionId);
+                            updatedDeployment.put("applications", apps);
+                            JSONObject removedD = update(nextDeploymentId, updatedDeployment, "remove");
+
+                            apps = new JSONArray();
+                            apps.add(versionId);
+                            updatedDeployment.put("applications", apps);
+                            updatedDeployment.put("lastModified", removedD.get("lastModified"));
+                            JSONObject addedD = update(removedD.getString("id"), updatedDeployment, "add");
+
+                            String redeploy = toggleRedeploy(addedD.getString("id"));
+                            System.out.println(">>> REDEPLOY : " + redeploy);
+                        }
+
+                    }
+		    	}
+		    } else {
+                System.out.println(">>> GET " + get.getStatusText());
+                get.releaseConnection();
+            }
+
+        } else {
+            System.out.println(">>> POST " + post.getStatusText());
+            post.releaseConnection();
+
+        }
+
 
         //TODO - better error handling 
         return "";
 	}
-	
+
+    private JSONObject update(String deploymentId, JSONObject updatedDeployment, String op) throws Exception {
+        System.out.println(">>>>>>>>> UPDATE: " + op);
+        System.out.println(">>>>>>>>> REQUEST: " + updatedDeployment.toString());
+
+        JSONObject responseObject = null;
+
+        HttpClient httpClient = configureHttpClient();
+        PutMethod put = new PutMethod(getMmcUrl() + "/deployments/" + deploymentId + "/" + op);
+        put.setDoAuthentication(true);
+
+        System.out.println(">>>>>>>>> URL: " + getMmcUrl() + "/deployments/" + deploymentId + "/" + op);
+
+        put.addRequestHeader("Content-Type", "application/json");
+        put.setRequestEntity(new StringRequestEntity(updatedDeployment.toString(), "application/json", null));
+        int statusCode = httpClient.executeMethod(put);
+
+        if (statusCode == 200) {
+            String response = put.getResponseBodyAsString();
+            System.out.println(">>>>>>>>> UPDATE RESPONSE: " + response);
+            responseObject = JSONObject.fromObject(response);
+        } else {
+            System.out.println(">>>>>>>>> UPDATE RESPONSE: " + + statusCode + " " + put.getStatusText());
+        }
+
+        put.releaseConnection();
+
+        return responseObject;
+    }
+
+    private String toggleRedeploy(String deploymentId) throws Exception {
+        String response = "";
+        System.out.println(">>>>>>>>> DEPLOYMENT ID: " + deploymentId);
+
+        HttpClient httpClient = configureHttpClient();
+        PostMethod post = new PostMethod(getMmcUrl() + "/deployments/" + deploymentId + "/redeploy");
+        post.setDoAuthentication(true);
+
+        int statusCode = httpClient.executeMethod(post);
+
+        if (statusCode == 200) {
+            response = "OK";
+        } else {
+            response = "" + statusCode + " " + post.getStatusText();
+        }
+
+        post.releaseConnection();
+
+        return response;
+    }
+
+    /**
+     *
+     * @return Application Versions Data:
+                [
+                    {
+                        "name":"20120829-12:50",
+                        "id":"local$b7440183-d549-438e-ac5d-1598c9f78b3d",
+                        "parentPath":"/Applications/mule-example-echo"
+                    },
+                    {
+                        "name":"20120829-15:30",
+                        "id":"local$66b3cf20-6e76-4fd9-8dc6-a50a804069a0",
+                        "parentPath":"/Applications/mule-example-hello"
+                    }
+                ]
+     * @throws Exception
+     */
+    private JSONArray listAllApplicationVersions(String applicationId) throws Exception {
+
+        JSONArray allApplicationVersions = null;
+
+        HttpClient httpClient = configureHttpClient();
+        GetMethod get = new GetMethod(getMmcUrl() + "/repository/" + applicationId);
+        get.setDoAuthentication(true);
+
+        int statusCode = httpClient.executeMethod(get);
+
+        if (statusCode == 200) {
+            String response = get.getResponseBodyAsString();
+            allApplicationVersions = JSONObject.fromObject(response).getJSONArray("data");
+        }
+
+        get.releaseConnection();
+
+        return allApplicationVersions;
+    }
+
 	private HttpClient configureHttpClient() throws Exception {
 		if (mmcHttpClient == null) {
 			URL url = new URL(getMmcUrl());
@@ -250,23 +402,6 @@ public class MMCDeployerBuilder extends Builder {
         public DescriptorImpl() {
             load();
         }
-
-        /**
-         * Performs on-the-fly validation of the form field 'name'.
-         *
-         * @param value
-         *      This parameter receives the value that the user has typed.
-         * @return
-         *      Indicates the outcome of the validation. This is sent to the browser.
-         */
-//        public FormValidation doCheckName(@QueryParameter String value)
-//                throws IOException, ServletException {
-//            if (value.length() == 0)
-//                return FormValidation.error("Please set a name");
-//            if (value.length() < 4)
-//                return FormValidation.warning("Isn't the name too short?");
-//            return FormValidation.ok();
-//        }
 
         public FormValidation doTestConnection(@QueryParameter("mmcUrl") final String mmcUrl,
         		@QueryParameter("user") final String user,
