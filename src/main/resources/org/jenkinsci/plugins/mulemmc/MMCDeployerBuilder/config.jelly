@@ -30,7 +30,7 @@
     <f:block>
 	  <table>
 	    <f:optionalBlock name="updateDeploymentScenario" title="Update Deployment Scenarios and Mule Runtimes" inline="true" checked="${instance.updateDeploymentScenario}">
-	      <f:entry title="Deployment Scenario" field="deploymentScenario">
+	      <f:entry title="Deployment Scenario" field="deploymentScenarioName">
 	      	<f:textbox/>
 	      </f:entry>
 	    </f:optionalBlock>

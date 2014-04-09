@@ -2,6 +2,7 @@ package org.jenkinsci.plugins.mulemmc;
 
 import hudson.Extension;
 import hudson.Launcher;
+import hudson.maven.AbstractMavenProject;
 import hudson.maven.MavenBuild;
 import hudson.maven.MavenModuleSetBuild;
 import hudson.maven.reporters.MavenArtifact;
@@ -70,8 +71,7 @@ public class MMCDeployerBuilder extends Builder {
     @DataBoundConstructor
     public MMCDeployerBuilder(String mmcUrl, String user, String password,
                               String deploymentScenarioName, String versionPattern,
-                              Boolean updateDeploymentScenario,
-                              DeploymentScenarioBlock deploymentScenarioBlock) {
+                              Boolean updateDeploymentScenario) {
         this.mmcUrl = mmcUrl;
         this.user = user;
         this.password = password;
@@ -79,8 +79,8 @@ public class MMCDeployerBuilder extends Builder {
 
         this.updateDeploymentScenario = updateDeploymentScenario;
 
-        if (deploymentScenarioBlock != null) {
-            this.deploymentScenarioName = deploymentScenarioBlock.deploymentScenarioName;
+        if (updateDeploymentScenario != null && updateDeploymentScenario.booleanValue()) {
+            this.deploymentScenarioName = deploymentScenarioName;
         } else {
             this.deploymentScenarioName = null;
         }
@@ -131,18 +131,7 @@ public class MMCDeployerBuilder extends Builder {
                 	
                 	MavenArtifactRecord record = mavenBuild.getMavenArtifacts();
                 	
-//                	listener.getLogger().println(">>>>>>> IS POM " + record.isPOM());
-                	
                 	MavenArtifact mainArtifact = record.mainArtifact;
-                	
-//                	listener.getLogger().println(">>>>>>> ARTIFACT ID: " +  mainArtifact.artifactId);
-//                	listener.getLogger().println(">>>>>>> VERSION: " +  mainArtifact.version);
-//                	try {
-//						listener.getLogger().println(">>>>>>> FILE: " +  mainArtifact.getFile(mavenBuild).getAbsolutePath());
-//					} catch (IOException e) {
-//						// TODO Auto-generated catch block
-//						e.printStackTrace();
-//					}
 
                 	if (record.isPOM()) {
                 		List<MavenArtifact> attachedArtifacts = record.attachedArtifacts;
@@ -214,11 +203,11 @@ public class MMCDeployerBuilder extends Builder {
 			String applicationId = responseJson.getString("applicationId");
 
             //Check if redeployment is toggled
-
-            redeployNewAppVersion(applicationId, versionId);
-
-
-
+            if (updateDeploymentScenario.booleanValue())
+                redeployNewAppVersion(applicationId, versionId);
+            else {
+                System.out.println(">>>>>>>>>> REDEPLOYMENT IS DISABLED!");
+            }
         } else {
             System.out.println(">>> POST " + post.getStatusText());
             post.releaseConnection();
@@ -456,8 +445,14 @@ public class MMCDeployerBuilder extends Builder {
         }
         
         public boolean isApplicable(Class<? extends AbstractProject> aClass) {
-            // Indicates that this builder can be used with all kinds of project types 
-            return true;
+            // Indicates that this builder can be used with Maven projects only
+            if (hudson.maven.AbstractMavenProject.class.isAssignableFrom(aClass)) {
+                System.out.println(">>>>>>>>>>> IS APPLICABLE, CLASS IS " + aClass.getName());
+                return true;
+            } else {
+                System.out.println(">>>>>>>>>>> NOT APPLICABLE, CLASS IS " + aClass.getName());
+            }
+            return false;
         }
 
         /**
@@ -500,16 +495,16 @@ public class MMCDeployerBuilder extends Builder {
 //        }
     }
 
-    public static class DeploymentScenarioBlock
-    {
-        private String deploymentScenarioName;
-
-        @DataBoundConstructor
-        public DeploymentScenarioBlock(String deploymentScenarioName)
-        {
-            this.deploymentScenarioName = deploymentScenarioName;
-        }
-    }
+//    public static class DeploymentScenarioBlock
+//    {
+//        private String deploymentScenarioName;
+//
+//        @DataBoundConstructor
+//        public DeploymentScenarioBlock(String deploymentScenarioName)
+//        {
+//            this.deploymentScenarioName = deploymentScenarioName;
+//        }
+//    }
 
 }
 
