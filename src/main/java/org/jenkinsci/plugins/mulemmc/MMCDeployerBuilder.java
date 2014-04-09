@@ -57,44 +57,56 @@ import org.kohsuke.stapler.StaplerRequest;
  */
 public class MMCDeployerBuilder extends Builder {
 
-    private final String mmcUrl;
-    private final String user;
-    private final String password;
-    private final String deploymentScenario;
-    private final String versionPattern;
+    public final String mmcUrl;
+    public final String user;
+    public final String password;
+    public final Boolean updateDeploymentScenario;
+    public final String deploymentScenarioName;
+    public final String versionPattern;
     
     private HttpClient mmcHttpClient;
     
     // Fields in config.jelly must match the parameter names in the "DataBoundConstructor"
     @DataBoundConstructor
-    public MMCDeployerBuilder(String mmcUrl, String user, String password, String deploymentScenario, String versionPattern) {
+    public MMCDeployerBuilder(String mmcUrl, String user, String password,
+                              String deploymentScenarioName, String versionPattern,
+                              Boolean updateDeploymentScenario,
+                              DeploymentScenarioBlock deploymentScenarioBlock) {
         this.mmcUrl = mmcUrl;
         this.user = user;
         this.password = password;
-        this.deploymentScenario = deploymentScenario;
         this.versionPattern = versionPattern;
-    }
 
+        this.updateDeploymentScenario = updateDeploymentScenario;
+
+        if (deploymentScenarioBlock != null) {
+            this.deploymentScenarioName = deploymentScenarioBlock.deploymentScenarioName;
+        } else {
+            this.deploymentScenarioName = null;
+        }
+    }
 
     public String getMmcUrl() {
 		return mmcUrl;
 	}
 
-
 	public String getUser() {
 		return user;
 	}
-
 
 	public String getPassword() {
 		return password;
 	}
 
-	public String getDeploymentScenario() {
-		return deploymentScenario;
+	public String getDeploymentScenarioName() {
+		return deploymentScenarioName;
 	}
 
-	public String getVersionPattern() {
+    public Boolean getUpdateDeploymentScenario() {
+        return updateDeploymentScenario;
+    }
+
+    public String getVersionPattern() {
 		return versionPattern;
 	}
 
@@ -108,7 +120,8 @@ public class MMCDeployerBuilder extends Builder {
         listener.getLogger().println(">>> MMC URL IS " + mmcUrl);
         listener.getLogger().println(">>> USER IS " + user);
         listener.getLogger().println(">>> PASSWORD IS " + password);
-        listener.getLogger().println(">>> DEPLOYMENT SCENARIO IS " + deploymentScenario);
+        listener.getLogger().println(">>> UPDATE DEPLOYMENT SCENARIO IS " + updateDeploymentScenario);
+        listener.getLogger().println(">>> DEPLOYMENT SCENARIO IS " + deploymentScenarioName);
 
         final Map<MavenArtifact, File> allMuleApplications = new HashMap<MavenArtifact, File>();
 
@@ -200,57 +213,11 @@ public class MMCDeployerBuilder extends Builder {
 			String versionId = responseJson.getString("versionId");
 			String applicationId = responseJson.getString("applicationId");
 
-            //System.out.println(">>>>>>>>>> NEW APP ID: " + applicationId);
-            //System.out.println(">>>>>>>>>> NEW VERSION ID: " + versionId);
+            //Check if redeployment is toggled
 
-			GetMethod get = new GetMethod(getMmcUrl() + "/deployments");
-			get.setDoAuthentication(true);
-			
-			//List all deployments
-		    statusCode = httpClient.executeMethod(get);
-		    
-		    if (statusCode == 200) {
-		    	response = get.getResponseBodyAsString();
-                get.releaseConnection();
-                System.out.println(">>>>>>>>>> ALL DEPLOYMENTS: " + response);
-                //Here we need to match deployment to application
-		    	JSONObject allDeployments =  JSONObject.fromObject(response);
-		    	JSONArray allDeploymentsData = allDeployments.getJSONArray("data");
+            redeployNewAppVersion(applicationId, versionId);
 
-                JSONArray allApplicationVersions = listAllApplicationVersions(applicationId);
 
-		    	for (JSONObject nextDeployment : (List<JSONObject>)JSONArray.toCollection(allDeploymentsData, JSONObject.class)) {
-		    		JSONArray nextDeploymentApps = nextDeployment.getJSONArray("applications");
-                    String nextDeploymentId = nextDeployment.getString("id");
-
-                    for (JSONObject nextAppVersion : (List<JSONObject>) JSONArray.toCollection(allApplicationVersions, JSONObject.class)) {
-                        String nextAppVersionId = nextAppVersion.getString("id");
-
-                        if (nextDeploymentApps.contains(nextAppVersionId)) { //Found deployment, Update with new version
-                            JSONObject updatedDeployment = new JSONObject();
-                            updatedDeployment.put("name", nextDeployment.get("name"));
-                            updatedDeployment.put("lastModified", nextDeployment.get("lastModified"));
-                            JSONArray apps = new JSONArray();
-                            apps.add(nextAppVersionId);
-                            updatedDeployment.put("applications", apps);
-                            JSONObject removedD = update(nextDeploymentId, updatedDeployment, "remove");
-
-                            apps = new JSONArray();
-                            apps.add(versionId);
-                            updatedDeployment.put("applications", apps);
-                            updatedDeployment.put("lastModified", removedD.get("lastModified"));
-                            JSONObject addedD = update(removedD.getString("id"), updatedDeployment, "add");
-
-                            String redeploy = toggleRedeploy(addedD.getString("id"));
-                            System.out.println(">>> REDEPLOY : " + redeploy);
-                        }
-
-                    }
-		    	}
-		    } else {
-                System.out.println(">>> GET " + get.getStatusText());
-                get.releaseConnection();
-            }
 
         } else {
             System.out.println(">>> POST " + post.getStatusText());
@@ -262,6 +229,62 @@ public class MMCDeployerBuilder extends Builder {
         //TODO - better error handling 
         return "";
 	}
+
+    private void redeployNewAppVersion(String applicationId, String versionId) throws Exception {
+        HttpClient httpClient = configureHttpClient();
+
+        GetMethod get = new GetMethod(getMmcUrl() + "/deployments");
+        get.setDoAuthentication(true);
+
+        //List all deployments
+        int statusCode = httpClient.executeMethod(get);
+
+        if (statusCode == 200) {
+            String response = get.getResponseBodyAsString();
+            get.releaseConnection();
+            System.out.println(">>>>>>>>>> ALL DEPLOYMENTS: " + response);
+            //Here we need to match deployment to application
+            JSONObject allDeployments =  JSONObject.fromObject(response);
+            JSONArray allDeploymentsData = allDeployments.getJSONArray("data");
+
+            JSONArray allApplicationVersions = listAllApplicationVersions(applicationId);
+
+            for (JSONObject nextDeployment : (List<JSONObject>)JSONArray.toCollection(allDeploymentsData, JSONObject.class)) {
+                JSONArray nextDeploymentApps = nextDeployment.getJSONArray("applications");
+                String nextDeploymentId = nextDeployment.getString("id");
+
+                for (JSONObject nextAppVersion : (List<JSONObject>) JSONArray.toCollection(allApplicationVersions, JSONObject.class)) {
+                    String nextAppVersionId = nextAppVersion.getString("id");
+
+                    if (nextDeploymentApps.contains(nextAppVersionId)) { //Found deployment, Update with new version
+
+                        JSONObject updatedDeployment = new JSONObject();
+                        updatedDeployment.put("name", nextDeployment.get("name"));
+                        updatedDeployment.put("lastModified", nextDeployment.get("lastModified"));
+
+                        JSONArray apps = new JSONArray();
+                        apps.add(nextAppVersionId);
+                        updatedDeployment.put("applications", apps);
+
+                        JSONObject removedD = update(nextDeploymentId, updatedDeployment, "remove");
+
+                        apps = new JSONArray();
+                        apps.add(versionId);
+                        updatedDeployment.put("applications", apps);
+                        updatedDeployment.put("lastModified", removedD.get("lastModified"));
+                        JSONObject addedD = update(removedD.getString("id"), updatedDeployment, "add");
+
+                        String redeploy = toggleRedeploy(addedD.getString("id"));
+                        System.out.println(">>> REDEPLOY : " + redeploy);
+                    }
+
+                }
+            }
+        } else {
+            System.out.println(">>> GET " + get.getStatusText());
+            get.releaseConnection();
+        }
+    }
 
     private JSONObject update(String deploymentId, JSONObject updatedDeployment, String op) throws Exception {
         System.out.println(">>>>>>>>> UPDATE: " + op);
@@ -476,5 +499,17 @@ public class MMCDeployerBuilder extends Builder {
 //            return useFrench;
 //        }
     }
+
+    public static class DeploymentScenarioBlock
+    {
+        private String deploymentScenarioName;
+
+        @DataBoundConstructor
+        public DeploymentScenarioBlock(String deploymentScenarioName)
+        {
+            this.deploymentScenarioName = deploymentScenarioName;
+        }
+    }
+
 }
 

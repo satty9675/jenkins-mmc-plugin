@@ -29,15 +29,9 @@
     
     <f:block>
 	  <table>
-	    <f:optionalBlock name="dynamic" title="Update Deployment Scenarios and Mule Runtimes">
+	    <f:optionalBlock name="updateDeploymentScenario" title="Update Deployment Scenarios and Mule Runtimes" inline="true" checked="${instance.updateDeploymentScenario}">
 	      <f:entry title="Deployment Scenario" field="deploymentScenario">
 	      	<f:textbox/>
-<!--
-	        <select name="deploymentScenarios" multiple="true">
-        		<option value="buildGoal">Build Goal</option>
-        		<option value="findBugsGoal">FindBugs goal</option>       		
-    		</select>
--->
 	      </f:entry>
 	    </f:optionalBlock>
 	  </table>
