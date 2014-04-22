@@ -12,6 +12,7 @@ import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
+import hudson.util.ComboBoxModel;
 import hudson.util.FormValidation;
 
 import java.io.File;
@@ -28,6 +29,7 @@ import java.util.Map.Entry;
 
 import javax.servlet.ServletException;
 
+import hudson.util.ListBoxModel;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 
@@ -64,14 +66,17 @@ public class MMCDeployerBuilder extends Builder {
     public final Boolean updateDeploymentScenario;
     public final String deploymentScenarioName;
     public final String versionPattern;
-    
+
+    public final List<String> selectedDeploymentScenarios;
+
     private HttpClient mmcHttpClient;
     
     // Fields in config.jelly must match the parameter names in the "DataBoundConstructor"
     @DataBoundConstructor
     public MMCDeployerBuilder(String mmcUrl, String user, String password,
                               String deploymentScenarioName, String versionPattern,
-                              Boolean updateDeploymentScenario) {
+                              Boolean updateDeploymentScenario,
+                              List<String> selectedDeploymentScenarios) {
         this.mmcUrl = mmcUrl;
         this.user = user;
         this.password = password;
@@ -81,8 +86,10 @@ public class MMCDeployerBuilder extends Builder {
 
         if (updateDeploymentScenario != null && updateDeploymentScenario.booleanValue()) {
             this.deploymentScenarioName = deploymentScenarioName;
+            this.selectedDeploymentScenarios = selectedDeploymentScenarios;
         } else {
             this.deploymentScenarioName = null;
+            this.selectedDeploymentScenarios = new ArrayList<String>();
         }
     }
 
@@ -110,6 +117,9 @@ public class MMCDeployerBuilder extends Builder {
 		return versionPattern;
 	}
 
+    public List<String> getSelectedDeploymentScenarios() {
+        return selectedDeploymentScenarios;
+    }
 
 	@Override
     public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) {
@@ -122,6 +132,7 @@ public class MMCDeployerBuilder extends Builder {
         listener.getLogger().println(">>> PASSWORD IS " + password);
         listener.getLogger().println(">>> UPDATE DEPLOYMENT SCENARIO IS " + updateDeploymentScenario);
         listener.getLogger().println(">>> DEPLOYMENT SCENARIO IS " + deploymentScenarioName);
+        listener.getLogger().println(">>> SELECTED DEPLOYMENT SCENARIOS LIST IS " + selectedDeploymentScenarios);
 
         final Map<MavenArtifact, File> allMuleApplications = new HashMap<MavenArtifact, File>();
 
@@ -203,7 +214,7 @@ public class MMCDeployerBuilder extends Builder {
 			String applicationId = responseJson.getString("applicationId");
 
             //Check if redeployment is toggled
-            if (updateDeploymentScenario.booleanValue())
+            if (updateDeploymentScenario != null && updateDeploymentScenario.booleanValue())
                 redeployNewAppVersion(applicationId, versionId);
             else {
                 System.out.println(">>>>>>>>>> REDEPLOYMENT IS DISABLED!");
@@ -398,6 +409,16 @@ public class MMCDeployerBuilder extends Builder {
      */
     @Extension // This indicates to Jenkins that this is an implementation of an extension point.
     public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
+
+        public ComboBoxModel getSelectedDeploymentScenarios() {
+            return selectedDeploymentScenarios;
+        }
+
+        public void setSelectedDeploymentScenarios(ComboBoxModel selectedDeploymentScenarios) {
+            this.selectedDeploymentScenarios = selectedDeploymentScenarios;
+        }
+
+        private ComboBoxModel selectedDeploymentScenarios = null;
         /**
          * To persist global configuration information,
          * simply store it in a field and call save().
@@ -440,14 +461,39 @@ public class MMCDeployerBuilder extends Builder {
     	        else
     	        	return FormValidation.error("Client error : " + method.getStatusText());
             } catch (Exception e) {
-                return FormValidation.error("Client error : "+e.getMessage());
+                return FormValidation.error("Client error : " + e.getMessage());
             }
         }
-        
+
+        public ComboBoxModel doFillSelectedDeploymentScenariosItems(@QueryParameter String mmcUrl, @QueryParameter String user, @QueryParameter String password) {
+            ComboBoxModel scns = new ComboBoxModel();
+
+            System.out.println("*************** URL: " + mmcUrl);
+            System.out.println("*************** USER: " + user);
+            System.out.println("*************** PASSWORD: " + password);
+
+//            for(SCMDescriptor<?> scm : SCM._for(project)) {
+//                // Filter MultiSCM itself from the list of choices.
+//                // Theoretically it might work, but I see no practical reason to allow
+//                // nested MultiSCM configurations.
+//                if(!(scm instanceof DescriptorImpl) && !(scm instanceof NullSCM.DescriptorImpl))
+//                    scms.add(scm);
+//            }
+
+            scns.add("Scenario 1");
+            scns.add("Scenario 2");
+            scns.add("Scenario 3");
+
+            System.out.println("=============== SCNS: " + scns);
+            this.selectedDeploymentScenarios = scns;
+            return scns;
+        }
+
+
         public boolean isApplicable(Class<? extends AbstractProject> aClass) {
             // Indicates that this builder can be used with Maven projects only
             if (hudson.maven.AbstractMavenProject.class.isAssignableFrom(aClass)) {
-                System.out.println(">>>>>>>>>>> IS APPLICABLE, CLASS IS " + aClass.getName());
+                //System.out.println(">>>>>>>>>>> IS APPLICABLE, CLASS IS " + aClass.getName());
                 return true;
             } else {
                 System.out.println(">>>>>>>>>>> NOT APPLICABLE, CLASS IS " + aClass.getName());

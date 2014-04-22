@@ -26,14 +26,16 @@
     <f:entry title="Version Number Pattern" field="versionPattern">
       <f:textbox default="yyyyMMdd'T'HHmmssz"/>
     </f:entry>
-    
-    <f:block>
+
+      <!--<f:entry title="Deployment Scenarios" field="selectedDeploymentScenarios"> &lt;!&ndash; with="mmcUrl,user,password" &ndash;&gt;-->
+          <!--<f:combobox items="${descriptor.selectedDeploymentScenarios}"/>-->
+      <!--</f:entry>-->
+
+      <f:block>
 	  <table>
 	    <f:optionalBlock name="updateDeploymentScenario" title="Update Deployment Scenarios and Mule Runtimes" inline="true" checked="${instance.updateDeploymentScenario}">
-	      <f:entry title="Deployment Scenario" field="deploymentScenarioName">
-	      	<f:textbox/>
-	      </f:entry>
-	    </f:optionalBlock>
+
+        </f:optionalBlock>
 	  </table>
 	</f:block>
 
