@@ -1,13 +1,21 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
-  <!--
-    This jelly script is used for per-project configuration.
 
-    See global.jelly for a general discussion about jelly script.
-  -->
 
-  <!--
-    When submitted, it will be passed to the corresponding constructor parameter.
-  -->
+
+<!--
+
+	public MMCDeployerBuilder(String mmcUrl
+									, String user
+									, String password
+									, boolean clusterDeploy
+									, String clusterOrServerGroupName
+									, String fileLocation
+									, String artifactName
+									, String artifactVersion )
+
+
+-->
+
   <f:section title="Deploy to Mule Management Console">
     <f:entry title="MMC API URL" field="mmcUrl"
       description="The URL of the MMC REST API - see http://www.mulesoft.org/documentation/display/current/MMC+REST+API for details">
@@ -22,22 +30,28 @@
     <f:validateButton
    		title="${%Test Connection}" progress="${%Testing...}"
    		method="testConnection" with="mmcUrl,user,password" />
-   		
-    <f:entry title="Version Number Pattern" field="versionPattern">
-      <f:textbox default="yyyyMMdd'T'HHmmssz"/>
+
+   	<f:entry title="Artifact Version" field="artifactVersion">
+       <f:textbox default=""/>
     </f:entry>
-
-      <!--<f:entry title="Deployment Scenarios" field="selectedDeploymentScenarios"> &lt;!&ndash; with="mmcUrl,user,password" &ndash;&gt;-->
-          <!--<f:combobox items="${descriptor.selectedDeploymentScenarios}"/>-->
-      <!--</f:entry>-->
-
-      <f:block>
-	  <table>
-	    <f:optionalBlock name="updateDeploymentScenario" title="Update Deployment Scenarios and Mule Runtimes" inline="true" checked="${instance.updateDeploymentScenario}">
-
-        </f:optionalBlock>
-	  </table>
-	</f:block>
-
+   		
+   	<f:entry title="Artifact Name" field="artifactName">
+ 		 <f:textbox default=""/>
+    </f:entry>
+   		
+    <f:entry title="File Location" field="fileLocation">
+ 		<f:textbox default=""/>
+    </f:entry>
+   		
+   	<f:entry title="Cluster or ServerGroup name" field="clusterOrServerGroupName">
+ 		<f:textbox default=""/>
+    </f:entry>
+    
+    <!--
+    <f:entry title="Is Cluster" field="clusterDeploy" description="Is cluster">
+        <f:checkbox />
+    </f:entry>
+    -->
+   	
   </f:section>
 </j:jelly>
