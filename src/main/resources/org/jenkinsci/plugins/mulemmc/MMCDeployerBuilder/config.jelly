@@ -1,9 +1,5 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
-
-
-
 <!--
-
 	public MMCDeployerBuilder(String mmcUrl
 									, String user
 									, String password
@@ -12,10 +8,7 @@
 									, String fileLocation
 									, String artifactName
 									, String artifactVersion )
-
-
 -->
-
   <f:section title="Deploy to Mule Management Console">
     <f:entry title="MMC API URL" field="mmcUrl"
       description="The URL of the MMC REST API - see http://www.mulesoft.org/documentation/display/current/MMC+REST+API for details">
@@ -31,27 +24,24 @@
    		title="${%Test Connection}" progress="${%Testing...}"
    		method="testConnection" with="mmcUrl,user,password" />
 
-   	<f:entry title="Artifact Version" field="artifactVersion">
+  	<f:entry title="Artifact Version" field="artifactVersion" description="required for freestyle projects only, ignored for maven projects">
        <f:textbox default=""/>
     </f:entry>
    		
-   	<f:entry title="Artifact Name" field="artifactName">
+   	<f:entry title="Artifact Name" field="artifactName" description="required for freestyle projects only, ignored for maven projects">
  		 <f:textbox default=""/>
     </f:entry>
    		
-    <f:entry title="File Location" field="fileLocation">
+    <f:entry title="File Location" field="fileLocation" description="required for freestyle projects only, ignored for maven projects">
  		<f:textbox default=""/>
     </f:entry>
-   		
-   	<f:entry title="Cluster or ServerGroup name" field="clusterOrServerGroupName">
+
+	<f:entry title="Cluster or ServerGroup name" field="clusterOrServerGroupName">
  		<f:textbox default=""/>
     </f:entry>
-    
    
     <f:entry title="Is Cluster" field="clusterDeploy" description="Is cluster">
         <f:checkbox />
     </f:entry>
-  
-   	
   </f:section>
 </j:jelly>
