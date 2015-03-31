@@ -47,11 +47,11 @@
  		<f:textbox default=""/>
     </f:entry>
     
-    <!--
+   
     <f:entry title="Is Cluster" field="clusterDeploy" description="Is cluster">
         <f:checkbox />
     </f:entry>
-    -->
+  
    	
   </f:section>
 </j:jelly>
