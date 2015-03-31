@@ -77,24 +77,6 @@ public class MMCDeployerBuilder extends Builder
 			for (FilePath file : build.getWorkspace().list(this.fileLocation))
 			{
 				listener.getLogger().println(">>> deployfile location  IS " + file.getRemote());
-				File artifactToDeploy = new File(file.getRemote());
-//				String version;
-//				String name;
-//				if (deployWithPomDetails)
-//				{
-//					File pomFile = new File ( artifactToDeploy.getParent(), "pom.xml");
-//
-//					listener.getLogger().println(">>> Deploy using pom details "+pomFile.toString());
-//					MavenProject project = getMavenProject(pomFile);
-//					version=project.getArtifactId();
-//					name=project.getVersion();
-//				}
-//				else 
-//				{
-//					version=this.artifactVersion;
-//					name=this.artifactName;
-//				}
-				//listener.getLogger().println(">>> Deploy using "+name+" "+version);
 				doDeploy(listener, muleRest, file, artifactVersion, artifactName);
 				success = true;
 			}
@@ -113,20 +95,6 @@ public class MMCDeployerBuilder extends Builder
 		return success;
 	}
 	
-//	private MavenProject getMavenProject(File pomfile)
-//	{
-//		Model model = null;
-//		FileReader reader = null;
-//		MavenXpp3Reader mavenreader = new MavenXpp3Reader();
-//		try {
-//		    reader = new FileReader(pomfile);
-//		    model = mavenreader.read(reader);
-//		    model.setPomFile(pomfile);
-//		}catch(Exception ex){}
-//		MavenProject project = new MavenProject(model);
-//		return project;
-//	}
-
 	private void doDeploy(BuildListener listener, MuleRest muleRest, FilePath aFile, String theVersion, String theName  ) throws Exception
 	{
 		listener.getLogger().println("Deployment starting...");
@@ -135,12 +103,12 @@ public class MMCDeployerBuilder extends Builder
 		if (clusterOrServerGroupName != null && clusterDeploy)
 		{
 			listener.getLogger().println("....doing cluster deploy");
-			deploymentId = muleRest.restfullyCreateClusterDeployment(clusterOrServerGroupName, theName, versionId);
+			deploymentId = muleRest.restfullyCreateClusterDeployment(clusterOrServerGroupName, theName+"-"+theVersion, versionId);
 
 		} else
 		{
 			listener.getLogger().println("....doing serverGroup deploy");
-			deploymentId = muleRest.restfullyCreateDeployment(clusterOrServerGroupName, theName, versionId);
+			deploymentId = muleRest.restfullyCreateDeployment(clusterOrServerGroupName, theName+"-"+theVersion, versionId);
 
 		}
 		muleRest.restfullyDeployDeploymentById(deploymentId);
