@@ -1,5 +1,6 @@
 package org.jenkinsci.plugins.mulemmc;
 
+import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
@@ -11,7 +12,6 @@ import hudson.tasks.Builder;
 import hudson.util.FormValidation;
 
 import java.io.File;
-
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -24,7 +24,6 @@ import org.apache.commons.httpclient.UsernamePasswordCredentials;
 import org.apache.commons.httpclient.auth.AuthPolicy;
 import org.apache.commons.httpclient.auth.AuthScope;
 import org.apache.commons.httpclient.methods.GetMethod;
-
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 
@@ -59,7 +58,8 @@ public class MMCDeployerBuilder extends Builder
 	public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener)
 	{
 		boolean success = false;
-
+		EnvVars envVars = new EnvVars();
+		
 		listener.getLogger().println(">>> MMC URL IS " + mmcUrl);
 		listener.getLogger().println(">>> USER IS " + user);
 		listener.getLogger().println(">>> PASSWORD IS " + password);
@@ -70,6 +70,9 @@ public class MMCDeployerBuilder extends Builder
 
 		try
 		{
+			
+			envVars = build.getEnvironment(listener);
+			
 			// aFile = getFile(workspace, fileLocation);
 			MuleRest muleRest = new MuleRest(new URL(mmcUrl), user, password);
 			
@@ -77,7 +80,7 @@ public class MMCDeployerBuilder extends Builder
 			for (FilePath file : build.getWorkspace().list(this.fileLocation))
 			{
 				listener.getLogger().println(">>> deployfile location  IS " + file.getRemote());
-				doDeploy(listener, muleRest, file, artifactVersion, artifactName);
+				doDeploy(listener, muleRest, file, hudson.Util.replaceMacro(artifactVersion, envVars), hudson.Util.replaceMacro(artifactName, envVars));
 				success = true;
 			}
 		} catch (IOException e)
