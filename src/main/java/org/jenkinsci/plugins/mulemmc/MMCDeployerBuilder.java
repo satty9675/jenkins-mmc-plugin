@@ -154,12 +154,12 @@ public class MMCDeployerBuilder extends Builder
 		if (clusterOrServerGroupName != null && clusterDeploy)
 		{
 			listener.getLogger().println("....doing cluster deploy");
-			deploymentId = muleRest.restfullyCreateClusterDeployment(clusterOrServerGroupName, theName + "-" + theVersion, versionId);
+			deploymentId = muleRest.restfullyCreateClusterDeployment(clusterOrServerGroupName, theName, versionId);
 
 		} else
 		{
 			listener.getLogger().println("....doing serverGroup deploy");
-			deploymentId = muleRest.restfullyCreateDeployment(clusterOrServerGroupName, theName + "-" + theVersion, versionId);
+			deploymentId = muleRest.restfullyCreateDeployment(clusterOrServerGroupName, theName, versionId);
 
 		}
 		muleRest.restfullyDeployDeploymentById(deploymentId);
