@@ -316,7 +316,7 @@ public class MuleRest
 		post.setDoAuthentication(true);
 
 		Part[] parts = { new FilePart("file", packageFile), new StringPart("name", name),
-		        new StringPart("version", new SimpleDateFormat("ddMMyyyyHHmmss").format(new Date())) };
+		        new StringPart("version", version) };
 
 		MultipartRequestEntity multipartEntity = new MultipartRequestEntity(parts, post.getParams());
 		post.setRequestEntity(multipartEntity);
