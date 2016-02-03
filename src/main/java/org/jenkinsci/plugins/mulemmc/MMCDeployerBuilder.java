@@ -41,11 +41,12 @@ public class MMCDeployerBuilder extends Builder
 	public final String artifactVersion;
 	public final String artifactName;
 	public final boolean clusterDeploy;
+	public final boolean completeDeployment;
 	public final String clusterOrServerGroupName;
 	public final boolean deployWithPomDetails;
 
 	@DataBoundConstructor
-	public MMCDeployerBuilder(String mmcUrl, String user, String password, boolean clusterDeploy, String clusterOrServerGroupName,
+	public MMCDeployerBuilder(String mmcUrl, String user, String password, boolean clusterDeploy, boolean completeDeployment, String clusterOrServerGroupName,
 	        String fileLocation, String artifactName, String artifactVersion) {
 		this.mmcUrl = mmcUrl;
 		this.user = user;
@@ -55,6 +56,7 @@ public class MMCDeployerBuilder extends Builder
 		this.artifactVersion = artifactVersion;
 		this.clusterOrServerGroupName = clusterOrServerGroupName;
 		this.clusterDeploy = clusterDeploy;
+		this.completeDeployment = completeDeployment;
 		this.deployWithPomDetails = true;
 	}
 
@@ -162,7 +164,9 @@ public class MMCDeployerBuilder extends Builder
 			deploymentId = muleRest.restfullyCreateDeployment(clusterOrServerGroupName, theName, versionId);
 
 		}
-		muleRest.restfullyDeployDeploymentById(deploymentId);
+		if(completeDeployment){
+			muleRest.restfullyDeployDeploymentById(deploymentId);
+		}
 		listener.getLogger().println("Deployment finished");
 	}
 
