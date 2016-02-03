@@ -323,11 +323,14 @@ public class MuleRest
 
 		int statusCode = httpClient.executeMethod(post);
 
+		//in the case of a conflict status code, use the pre-existing application
 		if (statusCode != Status.CONFLICT.getStatusCode()) {
 			processResponseCode(statusCode);
 
 		} else{
 			logger.info("ARTIFACT ALREADY EXISTS in MMC. Creating Deployment using Pre-Existing Artifact (Not-Overwriting)");
+			post.releaseConnection();
+			return restfullyGetApplicationId(name, version);
 		}
 
 		String responseObject = post.getResponseBodyAsString();
