@@ -41,11 +41,12 @@ public class MMCDeployerBuilder extends Builder
 	public final String artifactVersion;
 	public final String artifactName;
 	public final boolean clusterDeploy;
+	public final boolean completeDeployment;
 	public final String clusterOrServerGroupName;
 	public final boolean deployWithPomDetails;
 
 	@DataBoundConstructor
-	public MMCDeployerBuilder(String mmcUrl, String user, String password, boolean clusterDeploy, String clusterOrServerGroupName,
+	public MMCDeployerBuilder(String mmcUrl, String user, String password, boolean clusterDeploy, boolean completeDeployment, String clusterOrServerGroupName,
 	        String fileLocation, String artifactName, String artifactVersion) {
 		this.mmcUrl = mmcUrl;
 		this.user = user;
@@ -55,6 +56,7 @@ public class MMCDeployerBuilder extends Builder
 		this.artifactVersion = artifactVersion;
 		this.clusterOrServerGroupName = clusterOrServerGroupName;
 		this.clusterDeploy = clusterDeploy;
+		this.completeDeployment = completeDeployment;
 		this.deployWithPomDetails = true;
 	}
 
@@ -99,7 +101,11 @@ public class MMCDeployerBuilder extends Builder
 								listener.getLogger().println(">>>>>>>>>>>> ARTIFACT ID: " + nextAttached.artifactId);
 								listener.getLogger().println(">>>>>>>>>>>> VERSION: " + nextAttached.version);
 								listener.getLogger().println(">>>>>>>>>>>> FILE: " + nextAttached.getFile(mavenBuild).getAbsolutePath());
-								doDeploy(listener, muleRest, nextAttached.getFile(mavenBuild), nextAttached.version,
+								doDeploy(listener, 
+										muleRest, 
+										nextAttached.getFile(mavenBuild), 
+										hudson.Util.replaceMacro(clusterOrServerGroupName, envVars), 
+										nextAttached.version,
 								        nextAttached.artifactId);
 								success = true;
 							}
@@ -117,8 +123,13 @@ public class MMCDeployerBuilder extends Builder
 						listener.getLogger().println(">>>>>>>>>>>> ARTIFACT ID: " + hudson.Util.replaceMacro(artifactName, envVars));
 						listener.getLogger().println(">>>>>>>>>>>> VERSION: " +hudson.Util.replaceMacro(artifactVersion, envVars));
 						listener.getLogger().println(">>>>>>>>>>>> FILE: "+ file.getRemote());
+						listener.getLogger().println(">>>>>>>>>>>> SERVER: " +hudson.Util.replaceMacro(clusterOrServerGroupName, envVars));
 						
-						doDeploy(listener, muleRest, new File(file.getRemote()), hudson.Util.replaceMacro(artifactVersion, envVars),
+						doDeploy(listener, 
+								muleRest, 
+								new File(file.getRemote()), 
+								hudson.Util.replaceMacro(clusterOrServerGroupName, envVars), 
+								hudson.Util.replaceMacro(artifactVersion, envVars),
 						        hudson.Util.replaceMacro(artifactName, envVars));
 						success = true;
 					}
@@ -146,7 +157,7 @@ public class MMCDeployerBuilder extends Builder
 		return success;
 	}
 
-	private void doDeploy(BuildListener listener, MuleRest muleRest, File aFile, String theVersion, String theName) throws Exception
+	private void doDeploy(BuildListener listener, MuleRest muleRest, File aFile, String clusterOrServerGroupName, String theVersion, String theName) throws Exception
 	{
 		listener.getLogger().println("Deployment starting...");
 		String versionId = muleRest.restfullyUploadRepository(theName, theVersion, aFile);
@@ -162,7 +173,9 @@ public class MMCDeployerBuilder extends Builder
 			deploymentId = muleRest.restfullyCreateDeployment(clusterOrServerGroupName, theName, versionId);
 
 		}
-		muleRest.restfullyDeployDeploymentById(deploymentId);
+		if(completeDeployment){
+			muleRest.restfullyDeployDeploymentById(deploymentId);
+		}
 		listener.getLogger().println("Deployment finished");
 	}
 

@@ -323,7 +323,15 @@ public class MuleRest
 
 		int statusCode = httpClient.executeMethod(post);
 
-		processResponseCode(statusCode);
+		//in the case of a conflict status code, use the pre-existing application
+		if (statusCode != Status.CONFLICT.getStatusCode()) {
+			processResponseCode(statusCode);
+
+		} else{
+			logger.info("ARTIFACT ALREADY EXISTS in MMC. Creating Deployment using Pre-Existing Artifact (Not-Overwriting)");
+			post.releaseConnection();
+			return restfullyGetApplicationId(name, version);
+		}
 
 		String responseObject = post.getResponseBodyAsString();
 		post.releaseConnection();
@@ -415,7 +423,7 @@ public class MuleRest
 		post.setRequestEntity(new StringRequestEntity(stringWriter.toString(), "application/json", null));
 
 		logger.fine(">>>>restfullyCreateClusterDeploymentById request " + stringWriter.toString());
-		
+
 		int statusCode = httpClient.executeMethod(post);
 
 		processResponseCode(statusCode);
