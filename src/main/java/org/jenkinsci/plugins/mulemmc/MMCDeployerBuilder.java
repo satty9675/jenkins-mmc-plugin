@@ -67,8 +67,8 @@ public class MMCDeployerBuilder extends Builder
 		EnvVars envVars = new EnvVars();
 
 		listener.getLogger().println(">>> MMC URL IS " + mmcUrl);
-		listener.getLogger().println(">>> USER IS " + user);
-		listener.getLogger().println(">>> PASSWORD IS " + password);
+		//listener.getLogger().println(">>> USER IS " + user);
+		//listener.getLogger().println(">>> PASSWORD IS " + password);
 		listener.getLogger().println(">>> File URL IS " + fileLocation);
 		listener.getLogger().println(">>> ArtifactName IS " + artifactName);
 		listener.getLogger().println(">>> clusterOrServerGroupName IS " + clusterOrServerGroupName);
